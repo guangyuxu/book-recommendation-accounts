@@ -1,0 +1,55 @@
+# Build and run the accounts service locally with docker compose, plus a local Postgres.
+#
+# Config comes from .env (copy .env.example -> .env first). When running under compose, point
+# BOOK_AGENT_DATABASE_URL at the `db` service host (see .env.example). Generate RS256 keys first
+# (`make keygen`) and create the schema (`make init-db`) against the db.
+#
+# Usage:
+#   cp .env.example .env && make keygen
+#   docker compose up --build          # build and start, open http://localhost:8001/docs
+#   docker compose logs -f accounts    # follow logs
+#   docker compose down                # stop
+
+services:
+  accounts:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: book-recommendation-accounts:0.0.1
+    container_name: book-recommendation-accounts
+    ports:
+      - "8001:8001"          # API + Swagger UI at http://localhost:8001/docs
+    env_file:
+      - .env
+    volumes:
+      - ./keys:/app/keys:ro  # mount RS256 keys read-only (never baked into the image)
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8001/healthz').getcode()==200 else 1)\""]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  db:
+    image: postgres:18
+    container_name: book-recommendation-accounts-db
+    environment:
+      POSTGRES_USER: book
+      POSTGRES_PASSWORD: book
+      POSTGRES_DB: book
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U book"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  db-data:

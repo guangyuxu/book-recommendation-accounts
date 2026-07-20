@@ -1,0 +1,116 @@
+[project]
+name = "book-recommendation-accounts"
+version = "0.0.1"
+description = "Identity provider (signup/login, RS256 token issuance) + family/child CRUD for the book-recommendation platform. Single writer of the account/profile tables."
+authors = [
+    { name = "Gavin (Guangyu) Xu", email = "guangyuxu@gmail.com" },
+]
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.13"
+dependencies = [
+    "advanced-alchemy>=1.11.0",
+    "dishka>=1.10",
+    "fastapi>=0.121.0",
+    "httpx>=0.28.1",
+    "psycopg[binary]>=3.2",
+    "pydantic>=2.13.4",
+    "pydantic-settings>=2.7.0",
+    "pyjwt[crypto]>=2.13.0",
+    "python-dotenv>=1.2.2",
+    "sqlalchemy>=2.0",
+    "typing-extensions>=4.0",
+    "uvicorn[standard]>=0.34.0",
+]
+
+# Dev + test tooling (uv installs these by default). Mirrors the sibling repos so all projects
+# share one verification standard: anyio + pytest are test-only; coverage measures unit-test
+# coverage; mypy + ruff are the linters; codespell is the spell checker; pip-audit is the
+# dependency vulnerability scanner; pre-commit runs the local git hooks. `make ci` runs them all.
+[dependency-groups]
+dev = [
+    "anyio>=4.14.1",
+    "codespell>=2.4.2",
+    "coverage[toml]>=7.15.0",
+    "httpx2>=2.7.0",
+    "mypy>=2.2.0",
+    "pip-audit>=2.7.3",
+    "pre-commit>=4.0.0",
+    "pytest>=9.1.1",
+    "pytest-postgresql>=8.1.0",
+    "ruff>=0.15.21",
+]
+
+[build-system]
+requires = ["setuptools>=83.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["accounts"]
+[tool.setuptools.package-dir]
+"accounts" = "src/accounts"
+
+[tool.setuptools.package-data]
+"*" = ["py.typed"]
+
+[tool.mypy]
+# Single source of truth for type checking: the mypy CLI, CI, and the Makefile ALL invoke bare
+# `mypy` and read this section, so every entry point enforces the exact same standard.
+strict = true
+files = ["src/accounts"]
+mypy_path = "src"
+python_version = "3.13"
+namespace_packages = true
+explicit_package_bases = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+
+[tool.pytest.ini_options]
+# `integration` marks the tests/integration_tests suite (real Postgres via pytest-postgresql). It is
+# NOT run by the default gate -- `make test`/`coverage` scope to tests/unit_tests; `make integration`
+# runs it explicitly. Registered here so the marker doesn't warn.
+markers = [
+    "integration: end-to-end flow tests against a throwaway real Postgres (opt-in; needs pg binaries)",
+]
+
+[tool.coverage.run]
+# `coverage run -m pytest` (see `make coverage`) auto-scopes to the package via this source.
+source = ["src/accounts"]
+
+[tool.coverage.report]
+show_missing = true
+# Floor so coverage cannot silently rot; `coverage report` exits nonzero below this. Kept just
+# under the current number -- raise it as coverage improves.
+fail_under = 60
+
+[tool.ruff]
+exclude = [".cache", ".venv", "venv"]
+lint.select = [
+    "E",    # pycodestyle
+    "F",    # pyflakes
+    "I",    # isort
+    "D",    # pydocstyle
+    "D401", # First line should be in imperative mood
+    "S",    # flake8-bandit -- security (the service handles children's PII; see CLAUDE.md)
+    "T201",
+    "UP",
+]
+lint.ignore = [
+    "UP006",
+    "UP007",
+    "UP035",  # we do import from typing_extensions
+    "D417",   # don't require documenting every parameter
+    "E501",
+    # Docstrings are optional per-symbol: add them where they add value, not as filler.
+    "D101",
+    "D102",
+    "D103",
+    "D105",
+    "D106",
+    "D107",
+]
+[tool.ruff.lint.per-file-ignores]
+# Tests legitimately use `assert` (S101) and may hardcode fake secrets/tokens as fixtures.
+"tests/*" = ["D", "UP", "S101", "S105", "S106", "S107"]
+[tool.ruff.lint.pydocstyle]
+convention = "google"

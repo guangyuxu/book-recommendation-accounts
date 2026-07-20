@@ -1,0 +1,28 @@
+# FastAPI accounts image, built with uv. Plain ASGI app: slim Python base + uv, runs uvicorn.
+FROM python:3.13-slim
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy
+
+# uv from the official distroless image (pinned by digest-free tag; Dependabot bumps it).
+COPY --from=ghcr.io/astral-sh/uv:0.9 /uv /uvx /bin/
+
+WORKDIR /app
+
+# 1) Install dependencies first (cached layer) from the lockfile, without the project itself.
+COPY pyproject.toml uv.lock ./
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev --no-install-project
+
+# 2) Copy the source and install the project.
+COPY . .
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev
+
+EXPOSE 8001
+
+# Run the API. --host 0.0.0.0 so it is reachable from outside the container.
+# Create the schema out-of-band (`make init-db`), not in this CMD.
+CMD ["uv", "run", "--no-dev", "uvicorn", "accounts.main:app", "--host", "0.0.0.0", "--port", "8001"]
