@@ -21,8 +21,8 @@ COPY . .
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev
 
-EXPOSE 8001
+EXPOSE 8000
 
 # Run the API. --host 0.0.0.0 so it is reachable from outside the container.
 # Create the schema out-of-band (`make init-db`), not in this CMD.
-CMD ["uv", "run", "--no-dev", "uvicorn", "accounts.main:app", "--host", "0.0.0.0", "--port", "8001"]
+CMD ["uv", "run", "--no-dev", "uvicorn", "accounts.main:app", "--host", "0.0.0.0", "--port", "8000"]
