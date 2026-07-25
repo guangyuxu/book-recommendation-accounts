@@ -1,7 +1,7 @@
 # Build and run the accounts service locally with docker compose, plus a local Postgres.
 #
 # Config comes from .env (copy .env.example -> .env first). When running under compose, point
-# BOOK_AGENT_DATABASE_URL at the `db` service host (see .env.example). Generate RS256 keys first
+# DATABASE_URL at the `db` service host (see .env.example). Generate RS256 keys first
 # (`make keygen`) and create the schema (`make init-db`) against the db.
 #
 # Usage:

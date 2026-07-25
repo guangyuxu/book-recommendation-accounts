@@ -46,8 +46,8 @@ jobs:
           --health-retries 5
     env:
       # unit_tests/conftest.py uses setdefault, so this wins over the sqlite temp file
-      # and tests run against real Postgres.
-      BOOK_AGENT_DATABASE_URL: postgresql+psycopg://ci:ci@postgres:5432/ci?options=-csearch_path%3Dbook_agent
+      # and tests run against real Postgres. This service OWNS the `accounts` schema.
+      DATABASE_URL: postgresql+psycopg://ci:ci@postgres:5432/ci?options=-csearch_path%3Daccounts
       # Place the uv cache inside the workspace so actions/cache can reach it
       # from both the runner and the container.
       UV_CACHE_DIR: ${{ github.workspace }}/.cache/uv
