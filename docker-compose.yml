@@ -18,7 +18,7 @@ services:
     image: book-recommendation-accounts:0.0.1
     container_name: book-recommendation-accounts
     ports:
-      - "8001:8001"          # API + Swagger UI at http://localhost:8001/docs
+      - "8001:8000"          # accounts listens on 8000 in-container; API + Swagger at http://localhost:8001/docs
     env_file:
       - .env
     volumes:
@@ -28,7 +28,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8001/healthz').getcode()==200 else 1)\""]
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/healthz').getcode()==200 else 1)\""]
       interval: 30s
       timeout: 5s
       retries: 5
@@ -44,7 +44,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - db-data:/var/lib/postgresql/data
+      - db-data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U book"]
       interval: 10s

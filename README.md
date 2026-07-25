@@ -22,11 +22,11 @@ uv sync                          # install deps + create the venv
 cp .env.example .env             # dev defaults (local sqlite is used by tests automatically)
 make keygen                      # generate keys/private.pem + keys/public.pem (gitignored)
 make init-db                     # create the schema + tables from the models (needs Postgres via BOOK_AGENT_DATABASE_URL)
-make run                         # http://localhost:8001/docs
+make run                         # http://localhost:8000/docs
 ```
 
 Verify by signing up (returns an access token; every other endpoint requires the `Bearer` token):
-`curl -sX POST localhost:8001/auth/signup -d '{"email":"a@b.com","password":"s3cret-password"}' -H 'content-type: application/json'`.
+`curl -sX POST localhost:8000/auth/signup -d '{"email":"a@b.com","password":"s3cret-password"}' -H 'content-type: application/json'`.
 
 ## Verification
 

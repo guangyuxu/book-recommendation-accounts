@@ -96,8 +96,8 @@ keygen:               ## Generate an RS256 keypair into keys/ (dev; keys/ is git
 init-db:              ## Create the schema + tables from the models (CREATE SCHEMA IF NOT EXISTS + create_all)
 	uv run python -c "from accounts.db import init_db; init_db()"
 
-run:                  ## Run the API locally (http://localhost:8001/docs)
-	uv run uvicorn accounts.main:app --reload --host 0.0.0.0 --port 8001
+run:                  ## Run the API locally (http://localhost:8000/docs)
+	uv run uvicorn accounts.main:app --reload --host 0.0.0.0 --port 8000
 
 ######################
 # HELP
@@ -117,4 +117,4 @@ help:
 	@echo 'audit                        - dependency vulnerability scan (pip-audit; needs network)'
 	@echo 'keygen                       - generate an RS256 keypair into keys/ (dev)'
 	@echo 'init-db                      - create the schema + tables from the models (create_all)'
-	@echo 'run                          - run the API locally with reload (port 8001)'
+	@echo 'run                          - run the API locally with reload (port 8000)'
