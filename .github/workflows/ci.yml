@@ -1,13 +1,16 @@
-# CI: three parallel jobs.
-#   checks  — runs `make ci` (lint + coverage): the SAME command you run locally, the single
-#             ground truth. Only infrastructure that make cannot own lives here (Postgres service,
-#             DB init, uv/cache setup, coverage-artifact upload); every actual check lives in the
-#             Makefile CHECKS section, so CI and local cannot drift.
-#   docker  — image build check.
-#   secrets — gitleaks secret scan (server-side backstop for the pre-commit hook).
-# checks/docker run inside a Python 3.13 container for sandbox isolation.
-# Dependency auditing (pip-audit) is deliberately elsewhere (scheduled audit.yml) so a network /
-# advisory hiccup never blocks a code PR.
+# CI: four parallel jobs.
+#   checks      — runs `make ci` (lint + coverage): the SAME command you run locally, the single
+#                 ground truth. Only infrastructure that make cannot own lives here (Postgres
+#                 service, DB init, uv/cache setup, coverage-artifact upload); every actual check
+#                 lives in the Makefile CHECKS section, so CI and local cannot drift.
+#   integration — runs `make integration`: the end-to-end business journeys against a throwaway real
+#                 Postgres. Kept OUT of `make ci` (slower, needs the pg binaries) but still run on
+#                 every PR — its own job, so a red journey is unmistakable.
+#   docker      — image build check.
+#   secrets     — gitleaks secret scan (server-side backstop for the pre-commit hook).
+# checks/docker run inside a Python 3.13 container for sandbox isolation; integration cannot (see
+# the note on that job). Dependency auditing (pip-audit) is deliberately elsewhere (scheduled
+# audit.yml) so a network / advisory hiccup never blocks a code PR.
 
 name: CI
 
@@ -90,7 +93,54 @@ jobs:
           name: coverage-report
           path: coverage.xml
 
-  # ── 2. Docker build ──────────────────────────────────────────────────────────
+  # ── 2. Integration journeys (== `make integration`) ──────────────────────────
+  # Runs on the runner directly, NOT in the python:3.13-slim container the other jobs use:
+  # pytest-postgresql starts its throwaway cluster by shelling out to `initdb`, and initdb REFUSES
+  # to run as root — which is exactly what a job inside a container is. The runner's default user is
+  # unprivileged, so the cluster comes up there. No `services:` block either: the suite owns its own
+  # cluster (a temp datadir on a random port) and points DATABASE_URL at it in conftest.
+  integration:
+    name: Integration (make integration)
+    runs-on: ubuntu-latest
+    env:
+      UV_CACHE_DIR: ${{ github.workspace }}/.cache/uv
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - uses: actions/cache@v6
+        with:
+          path: .cache/uv
+          key: uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
+          restore-keys: uv-${{ runner.os }}-
+
+      - name: Put the Postgres server binaries on PATH
+        run: |
+          # The runner image ships a Postgres server under /usr/lib/postgresql/<major>/bin, but only
+          # the client is on PATH; pytest-postgresql needs initdb/pg_ctl. Install it if a future
+          # image drops it, and always pin to the highest major present.
+          dir=$(ls -d /usr/lib/postgresql/*/bin 2>/dev/null | sort -V | tail -1)
+          if [ -z "$dir" ]; then
+            sudo apt-get update
+            sudo apt-get install -y --no-install-recommends postgresql
+            dir=$(ls -d /usr/lib/postgresql/*/bin | sort -V | tail -1)
+          fi
+          echo "$dir" >> "$GITHUB_PATH"
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Install dependencies
+        run: uv sync
+
+      # THE ground truth: byte-for-byte the same command developers run locally.
+      - name: make integration
+        run: make integration
+
+  # ── 3. Docker build ──────────────────────────────────────────────────────────
   docker:
     name: Docker build
     runs-on: ubuntu-latest
@@ -104,7 +154,7 @@ jobs:
       - name: Build Docker image
         run: docker build -t book-recommendation-accounts:${{ steps.tag.outputs.tag }} .
 
-  # ── 3. Secret scan ───────────────────────────────────────────────────────────
+  # ── 4. Secret scan ───────────────────────────────────────────────────────────
   # Server-side backstop for the gitleaks pre-commit hook: catches secrets even if a contributor
   # never ran `pre-commit install`. fetch-depth: 0 so it scans full history on push.
   # NOTE: gitleaks-action is free for public repos; a private org needs GITLEAKS_LICENSE in env.
