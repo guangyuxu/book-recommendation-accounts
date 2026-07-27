@@ -11,7 +11,7 @@ requires-python = ">=3.13"
 dependencies = [
     "advanced-alchemy>=1.11.0",
     "dishka>=1.10",
-    "fastapi>=0.121.0",
+    "fastapi>=0.140.0",
     "httpx>=0.28.1",
     "psycopg[binary]>=3.2",
     "pydantic>=2.13.4",
@@ -20,7 +20,7 @@ dependencies = [
     "python-dotenv>=1.2.2",
     "sqlalchemy>=2.0",
     "typing-extensions>=4.0",
-    "uvicorn[standard]>=0.34.0",
+    "uvicorn[standard]>=0.51.0",
 ]
 
 # Dev + test tooling (uv installs these by default). Mirrors the sibling repos so all projects
