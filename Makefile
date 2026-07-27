@@ -18,7 +18,7 @@
 # ─────────────────────────────────────────────────────────────────────────────────────
 
 .PHONY: all \
-	lint_ruff lint_format typecheck spell_check audit test coverage \
+	lint_ruff lint_format typecheck spell_check audit test coverage integration \
 	lint check ci format spell_fix \
 	keygen init-db run help
 
@@ -35,10 +35,14 @@ all: help
 #
 # Everyday use:  `make check`  (fast, offline: lint + test; lint = ruff + format + mypy + codespell)
 # Before push:   `make ci`     (what GitHub Actions runs verbatim: lint + coverage; fully offline)
-# The default suite (`test`/`coverage`) is the fast SQLite unit tests under tests/unit_tests.
-# `make integration` runs tests/integration_tests against a throwaway REAL Postgres started by
-# pytest-postgresql (local initdb/pg_ctl -- offline, but needs the Postgres binaries on PATH), so it
-# is kept OUT of the blocking gate and run on its own (opt-in / separate CI job).
+#
+# TEST LAYOUT (the same law in accounts / agent / service -- see tests/__init__.py):
+#   tests/unit_tests/         fast + offline SQLite, tree MIRRORS src/accounts/ -- the blocking gate
+#                             (`test`/`coverage` scope HERE, so nothing slow can sneak into `ci`).
+#   tests/integration_tests/  end-to-end journeys, organized by FLOW -- `make integration`, opt-in.
+# `make integration` runs against a throwaway REAL Postgres started by pytest-postgresql (local
+# initdb/pg_ctl -- offline, but needs the Postgres binaries on PATH), so it is kept OUT of the
+# blocking gate and runs as its OWN CI job (the `integration` job in .github/workflows/ci.yml).
 
 CHECK_PATHS = src/ tests/
 
@@ -65,8 +69,10 @@ coverage:                ## runs the unit suite under coverage + report (this is
 	uv run coverage run -m pytest tests/unit_tests
 	uv run coverage report
 
-integration:             ## end-to-end business flows vs a throwaway REAL Postgres (needs pg binaries on PATH)
-	uv run pytest tests/integration_tests
+# pytest exits 5 ("no tests ran") on an empty suite; treat 5 as a pass so the target means the same
+# thing in the sibling repos, whose journey suites are still placeholders. Identical text there.
+integration:             ## end-to-end journeys vs a throwaway REAL Postgres (needs pg binaries on PATH)
+	@uv run pytest tests/integration_tests; s=$$?; [ $$s -eq 5 ] && exit 0 || exit $$s
 
 # -- composites --
 lint: lint_ruff lint_format typecheck spell_check  ## all static checks: ruff + format + mypy + codespell (fast, offline)

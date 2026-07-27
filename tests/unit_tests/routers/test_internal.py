@@ -11,7 +11,7 @@ from typing import Any
 
 from accounts.config import Settings, get_settings
 
-from .conftest import make_keypair
+from ..conftest import make_keypair
 
 
 def _second_family(client: Any) -> str:

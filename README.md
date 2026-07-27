@@ -50,5 +50,13 @@ src/accounts/
   db/            engine/session/Base + models + repositories (shared Postgres)
   routers/       auth.py, family.py (external), internal.py (service token)
 scripts/         gen_keys.py (dev RS256 keypair)
-tests/           unit_tests (SQLite) + integration_tests (real Postgres)
+tests/
+  unit_tests/    fast + offline (SQLite); the tree MIRRORS src/accounts/ — routers/, db/
+  integration_tests/  end-to-end journeys vs a real ephemeral Postgres, one file per FLOW
 ```
+
+The test layout is the same law in all three service repos (accounts / agent / service): unit tests
+mirror the source tree so a missing mirror directory is a visible coverage gap, while integration
+tests are named after the business journey they walk, because a journey crosses modules by
+definition. `make test` / `make ci` run only `unit_tests`; `make integration` runs the journeys
+(needs the Postgres binaries on PATH — CI runs them in their own job).
